@@ -1,0 +1,54 @@
+#! /usr/bin/perl
+
+use LWP::Simple;
+use HTML::LinkExtor;
+my @base_url = ();
+my $limit_num = 100;
+my %downed_pages;
+sub callback {
+    my ($tag, %links) = @_;
+    return if $tag ne 'a';
+    push (@base_url, values %links);
+}
+
+while(<>)
+{
+    chomp;
+    push @base_url, $_;
+}
+
+my $cnt = 1;
+foreach $link (@base_url)
+{
+    last if($cnt > $limit_num);
+    if(!exists $downed_pages{$links})
+    {
+	$downed_pages{$link} = 1;
+	$name = $cnt . ".html";
+	$cnt++;
+	system("wget $link -O ./htmls/$name");
+	$html = get($link);
+	$link_extor = HTML::LinkExtor->new(\&callback);
+	$link_extor->parse($html);
+   }
+}
+
+@files = `find ./htmls/ -type f`;
+@files = sort @files;
+
+open (EMAIL, ">emails") || die "Could not open the file: emails";
+foreach $page (@files) {
+    open (READFILE, "<$page") || die "Could not open the file: $page";
+    while($line = <READFILE>) {
+	if($line =~ m/\b(\w[-.\w]*\@[-a-z0-9]+(\.[-a-z0-9]+)*\.(com|edu|net|info))\b/)
+	{
+	    $text = $1;
+	    print EMAIL "$text\n";
+	}
+       
+      
+    }
+    close READFILE;
+} 
+
+close EMAIL;
